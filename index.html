@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora básica</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="calculator" role="application" aria-label="Calculadora básica">
+    <div class="display" aria-hidden="false">
+      <div id="previous" class="previous-operand" aria-live="polite"></div>
+      <div id="current" class="current-operand" aria-live="polite">0</div>
+    </div>
+
+    <div class="keys">
+      <button data-clear>AC</button>
+      <button data-delete>DEL</button>
+      <button data-operator data-value="/">÷</button>
+      <button data-operator data-value="*">×</button>
+
+      <button data-number="7">7</button>
+      <button data-number="8">8</button>
+      <button data-number="9">9</button>
+      <button data-operator data-value="-">−</button>
+
+      <button data-number="4">4</button>
+      <button data-number="5">5</button>
+      <button data-number="6">6</button>
+      <button data-operator data-value="+">+</button>
+
+      <button data-number="1">1</button>
+      <button data-number="2">2</button>
+      <button data-number="3">3</button>
+      <button data-equals>=</button>
+
+      <button data-number="0" style="grid-column: span 2">0</button>
+      <button data-number=".">.</button>
+    </div>
+  </main>
+
+  <script>
+    // Lógica de la calculadora
+    class Calculator {
+      constructor(previousTextEl, currentTextEl) {
+        this.previousTextEl = previousTextEl;
+        this.currentTextEl = currentTextEl;
+        this.clear();
+      }
+
+      clear() {
+        this.current = '0';
+        this.previous = '';
+        this.operator = null;
+        this.shouldResetScreen = false;
+        this.updateDisplay();
+      }
+
+      delete() {
+        if (this.current === 'Error') { this.current = '0'; }
+        else if (this.current.length === 1) { this.current = '0'; }
+        else { this.current = this.current.slice(0, -1); }
+        this.updateDisplay();
+      }
+
+      appendNumber(number) {
+        if (this.current === 'Error') this.current = '0';
+        if (number === '.' && this.current.includes('.')) return;
+
+        if (this.shouldResetScreen) {
+          this.current = (number === '.') ? '0.' : number;
+          this.shouldResetScreen = false;
+        } else {
+          this.current = (this.current === '0' && number !== '.') ? number : this.current + number;
+        }
+        this.updateDisplay();
+      }
+
+      chooseOperator(op) {
+        if ((this.current === '' || this.current === '0') && this.previous !== '') {
+          this.operator = op;
+          this.updateDisplay();
+          return;
+        }
+
+        if (this.previous !== '' && this.current !== '') {
+          this.compute();
+        }
+
+        this.operator = op;
+        this.previous = this.current;
+        this.current = '';
+        this.updateDisplay();
+      }
+
+      compute() {
+        if (this.previous === '' || this.current === '' || this.operator === null) return;
+
+        const prev = parseFloat(this.previous);
+        const curr = parseFloat(this.current);
+
+        if (isNaN(prev) || isNaN(curr)) return;
+
+        let result;
+        switch (this.operator) {
+          case '+': result = prev + curr; break;
+          case '-': result = prev - curr; break;
+          case '*': result = prev * curr; break;
+          case '/':
+            if (curr === 0) {
+              this.current = 'Error';
+              this.previous = '';
+              this.operator = null;
+              this.shouldResetScreen = true;
+              this.updateDisplay();
+              return;
+            }
+            result = prev / curr;
+            break;
+          default: return;
+        }
+
+        this.current = this.formatResult(result);
+        this.operator = null;
+        this.previous = '';
+        this.shouldResetScreen = true;
+        this.updateDisplay();
+      }
+
+      formatResult(num) {
+        if (!isFinite(num)) return 'Error';
+        return parseFloat(Number(num).toPrecision(12)).toString();
+      }
+
+      updateDisplay() {
+        this.currentTextEl.textContent = (this.current === '' ? '0' : this.current);
+        this.previousTextEl.textContent = (this.operator && this.previous) ? `${this.previous} ${this.operator}` : '';
+      }
+    }
+
+    // Inicialización DOM
+    const previousTextEl = document.getElementById('previous');
+    const currentTextEl = document.getElementById('current');
+    const calc = new Calculator(previousTextEl, currentTextEl);
+
+    // Eventos botones
+    document.querySelectorAll('[data-number]').forEach(btn =>
+      btn.addEventListener('click', () => calc.appendNumber(btn.dataset.number))
+    );
+
+    document.querySelectorAll('[data-operator]').forEach(btn =>
+      btn.addEventListener('click', () => calc.chooseOperator(btn.dataset.value))
+    );
+
+    document.querySelector('[data-equals]').addEventListener('click', () => calc.compute());
+    document.querySelector('[data-clear]').addEventListener('click', () => calc.clear());
+    document.querySelector('[data-delete]').addEventListener('click', () => calc.delete());
+
+    // Soporte teclado
+    window.addEventListener('keydown', (e) => {
+      if (e.key >= '0' && e.key <= '9') calc.appendNumber(e.key);
+      else if (e.key === '.') calc.appendNumber('.');
+      else if (['+', '-', '*', '/'].includes(e.key)) calc.chooseOperator(e.key);
+      else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); calc.compute(); }
+      else if (e.key === 'Backspace') calc.delete();
+      else if (e.key === 'Escape') calc.clear();
+    });
+  </script>
+</body>
+</html>
